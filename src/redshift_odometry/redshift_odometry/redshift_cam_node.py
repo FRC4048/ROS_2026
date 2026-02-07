@@ -1,3 +1,14 @@
+"""
+redshift_cam_node.py
+====================
+Calculates robot global position (odometry) by triangulating AprilTag detections.
+
+This node transforms tag-relative camera coordinates into world-relative robot 
+coordinates using a pre-defined Field Tag Table and the TF2 tree.
+
+Launch Example:
+    ros2 run redshift_odometry redshift_cam_node --ros-args -p camera_instance:=cam1
+"""
 import rclpy
 from rclpy.node import Node
 from rclpy.parameter import Parameter
@@ -18,7 +29,26 @@ import pprint
 # to start this node, use a launch file or ros2 run redshift_odometry redshift_cam_node --ros-args -p camera_instance:=cam1
 
 class TransformNode(Node):
+    """
+    ROS2 Node that converts AprilTag detections into robot pose estimates.
 
+    It listens for detections from a camera, looks up the tag's known position 
+    in the world via `TagTable`, and performs a coordinate transformation 
+    to determine the robot's location relative to the field origin.
+
+    Attributes:
+        cam_id (str): Unique identifier for the camera instance (e.g., 'cam1').
+        debug (int): Logging level (0: off, 1: debug TFs, 2: verbose).
+        tf_buffer (Buffer): TF2 buffer for looking up camera-to-robot transforms.
+        tf_listener (TransformListener): Listener for the TF2 buffer.
+    
+    Subscribes:
+        detections (apriltag_msgs.msg.AprilTagDetectionArray): Raw tag data from the vision system.
+    
+    Publishes:
+        /tf (tf2_msgs.msg.TFMessage): Debugging transforms (TEMP frames for RViz).
+        /pose (roborio_msgs.msg.RoborioOdometry): Calculated robot position and tag distance.
+    """
     def __init__(self):
         super().__init__('transform_node')
         
@@ -49,18 +79,35 @@ class TransformNode(Node):
     # This callback function is used to search for a detection.
     # We loop through all detections, find tf to robot and publish it.
     # -----------------------------------------------------------------------------------------                   
-    def detection_callback(self, msg):       
+    def detection_callback(self, msg):  
+       """
+        Processes a batch of AprilTag detections.
+
+        For each tag detected, this method:
+        1. Identifies the tag ID.
+        2. Looks up the robot's position relative to that tag using TF2.
+        3. Combines that with the tag's global position to find the robot in 'world'.
+        4. Calculates distance and Euler angles (yaw).
+        5. Publishes the resulting odometry data.
+
+        Args:
+            msg (AprilTagDetectionArray): Array of detected AprilTags from the camera.
+        """     
        for detection in msg.detections:
           tag = detection.id
           tagid = "tag" + str(tag) + self.cam_id
           try:             
              if (self.debug > 1):
                 print(self.tf_buffer.all_frames_as_string())
-
+             
+             # Step 1: Get robot pose relative to the tag (tag->robot)
+             # This transform represents where the robot is in the tag's local coordinate system.
              tf_tr = self.tf_buffer.lookup_transform(tagid, 'robot', rclpy.time.Time(), Duration(seconds = 0.0))  # tag->robot in tag frame 
+             
+             # Step 2: Calculate world->robot
              tf_wr = self.combine_transforms(tag, tf_tr) # calculate world->robot from world->tag and tag->robot
              
-             # calculate distance between robot and tag
+             # Step 3: calculate distance between robot and tag
              distance = math.sqrt((TagTable.tag_table[tag]["x"] - tf_wr.transform.translation.x) ** 2 + 
                                   (TagTable.tag_table[tag]["y"] - tf_wr.transform.translation.y) ** 2)
              
@@ -69,10 +116,11 @@ class TransformNode(Node):
                tf_message = TFMessage(transforms=[tf_wr])
                self.debug_publisher.publish(tf_message)
                
-             # build and send the pose message  
+             # Step 4: Convert Quaternions to Euler for the RoboRIO
              angles = tft.euler_from_quaternion([tf_wr.transform.rotation.x, tf_wr.transform.rotation.y,
               					 tf_wr.transform.rotation.z, tf_wr.transform.rotation.w], axes='szyx')
      
+             # Step 5: Construct and publish custom Odometry message
              pose_message = RoborioOdometry()
              pose_message.tag = tag
              pose_message.x = tf_wr.transform.translation.x
@@ -97,7 +145,25 @@ class TransformNode(Node):
     # We publish a world->TEMP tf so we can view in rviz
     #
     # -----------------------------------------------------------------------------------------       
-    def combine_transforms(self, tag, trans_bc):       
+    def combine_transforms(self, tag, trans_bc):  
+       """
+        Performs 3D coordinate math to link World -> Tag -> Robot.
+
+        Logic:
+            pos(a->c) = pos(a->b) + Rot(b->a) * pos(b->c)
+            rot(a->c) = rot(a->b) * rot(b->c)
+        Where:
+            a = World Frame
+            b = Tag Frame
+            c = Robot Frame
+
+        Args:
+            tag (int): The ID of the AprilTag found in the TagTable.
+            trans_bc (TransformStamped): The tag-to-robot transform.
+
+        Returns:
+            TransformStamped: The world-to-robot transform.
+        """     
        trans_ac = TransformStamped()
        trans_ac.header.stamp = self.get_clock().now().to_msg()
        trans_ac.header.frame_id = trans_bc.header.frame_id[:-2]  #remove the c1 from tag1c1

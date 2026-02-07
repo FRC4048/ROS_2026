@@ -1,3 +1,27 @@
+"""
+tcp_client_node.py
+==================
+This module provides a ROS2 node that sends odometry data from Rpi to the 
+RoboRIO via a TCP/IP socket.
+
+The node serializes RoborioOdometry messages into a packed binary format 
+to minimize latency and bandwidth.
+
+To start node:
+    on rpi - started automatically from docker-compose.yaml
+    testing - YOU NEED TO HAVE AT LEAST ONE CAMERA NODE RUNNING AND GETTING 
+              DETECTIONS BEFORE TESTING THIS NODE!
+        from terminal got to ros2_ws :
+            source "/opt/ros/humble/setup.bash"
+            source ./install/setup.bash
+            ros2 run redshift_odometry redshift_tcp
+        then - from a different terminal check the messages:
+            ros2 topic echo /pose 
+
+    note: if testing on the robot -  self.server_ip = "10.40.48.2"
+          if testing NOT on the robot - self.server_ip = "192.168.ip.where.NT.server.is.running"
+"""
+
 import socket
 import rclpy
 import time
@@ -9,6 +33,27 @@ from roborio_msgs.msg import RoborioOdometry
 
 
 class TcpClientNode(Node):
+    """
+    A ROS2 Node that forwards robot odometry to a TCP server.
+
+    This node subscribes to the `/pose` topic, calculates the message latency, 
+    and packs the data into a binary format before sending it over a socket.
+
+    Attributes:
+        server_ip (str): The IP address of the TCP server (default: 10.40.48.2).
+        server_port (int): The port to connect to (default: 5806).
+        socket_connected (bool): Tracking state for the TCP connection.
+        socket (socket.socket): The active TCP socket object.
+
+    Subscribes:
+        /pose (roborio_msgs.msg.RoborioOdometry): The incoming odometry and tag data.
+
+    Protocol (Binary):
+        The data is packed using Big-Endian (`!`) byte order:
+        - 5 Doubles (8-byte floats): x, y, yaw, distance, latency.
+        - 1 Integer (4-byte int): tag ID.
+    """
+
     def __init__(self):
         super().__init__("tcp_client_node")
 
@@ -27,6 +72,12 @@ class TcpClientNode(Node):
         self.connect_to_server()
 
     def connect_to_server(self):
+        """
+        Attempts to establish a TCP connection with the server.
+        
+        This method blocks using a while-loop and sleep until a connection is 
+        successful, ensuring the node doesn't proceed without a valid socket.
+        """
         while not self.socket_connected:
             try:
                 self.socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
@@ -40,6 +91,15 @@ class TcpClientNode(Node):
                 time.sleep(1)
 
     def tcp_callback(self, pose_msg):
+        """
+        Processes incoming pose messages and transmits them via TCP.
+
+        Calculates the latency between the message timestamp and current time,
+        packs the message components into a binary buffer, and sends it.
+
+        Args:
+            pose_msg (RoborioOdometry): The odometry message received from the /pose topic.
+        """
         # calculate latency
         diff = self.get_clock().now() - rclpy.time.Time.from_msg(pose_msg.header.stamp)
         latency = round(diff.nanoseconds / 1e6)  # latency is in milliSeconds

@@ -10,7 +10,14 @@ from rclpy.qos import QoSProfile, QoSReliabilityPolicy, QoSDurabilityPolicy
 # it is meant to be called from a ROS node.
 
 class TagManager:
+    """
+    Manages and caches static transformations for AprilTags on the field.
 
+    This class subscribes to `/tf_static` to discover the fixed positions of 
+    AprilTags relative to the 'world' frame. It serves as a local cache so that 
+    other nodes can instantly look up a tag's position without querying the 
+    TF2 buffer repeatedly.
+    """
     def __init__(self, node, logger):
        self.node = node
        self.logger = logger
