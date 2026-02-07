@@ -20,7 +20,6 @@ setup(
     tests_require=['pytest'],
     entry_points={
         'console_scripts': [
-            'redshift_monitor = redshift_monitor.redshift_monitor:main',
             'redshift_lifesigns = redshift_monitor.redshift_lifesigns:main',            
         ],
     },
