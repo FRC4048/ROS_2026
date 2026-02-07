@@ -1,0 +1,12 @@
+<launch>
+  <node pkg="usb_cam" exec="usb_cam_node_exe" name="sim">
+     <param name="video_device" value="/dev/video2"/>
+     <param name="camera_name" value="logitech_cam"/>
+     <param name="frame_id" value="logitech"/>
+     <param name="image_height" value="480"/>     
+     <param name="image_width" value="640"/>
+     <param name="autoexposure" value="false"/>
+     <param name="exposure" value="10"/>     
+     <remap from="/image_raw" to="/image"/>
+  </node>
+</launch>

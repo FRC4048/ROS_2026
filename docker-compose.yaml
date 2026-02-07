@@ -1,0 +1,45 @@
+services:
+  camera1:
+    container_name: camera1
+    image: "frc4048-ros2"
+    network_mode: host
+    ipc: host
+    privileged: true
+    environment:
+      - CAM=1
+    devices:
+      - /dev/video0
+    command: ["./start-camera.sh"]
+    restart: always
+  camera2:
+    container_name: camera2
+    image: "frc4048-ros2"
+    network_mode: host
+    ipc: host
+    privileged: true
+    environment:
+      - CAM=2
+    devices:
+      - /dev/video2
+    command: ["./start-camera.sh"]
+    restart: always  
+  tcp:
+    container_name: tcp
+    image: "frc4048-ros2"
+    network_mode: host
+    privileged: true
+    ipc: host
+    command: ["./start-tcp.sh"]
+    restart: unless-stopped
+  lifesigns:
+    container_name: lifesigns
+    image: "frc4048-ros2"
+    network_mode: host
+    ipc: host
+    privileged: true
+    environment:
+      - PUB_ROS=0
+      - PUB_NT=1
+    command: ["./start-lifesigns.sh"]
+    restart: unless-stopped
+

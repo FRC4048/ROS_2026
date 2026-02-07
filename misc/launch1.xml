@@ -1,0 +1,7 @@
+<launch>
+  <node pkg="usb_cam" exec="usb_cam_node_exe" name="sim">
+    <remap from="/image_raw" to="/image"/>
+     <param name="video_device" value="/dev/video2"/>
+     <param name="camera_name" value="microsoft_cam"/>
+  </node>
+</launch>
