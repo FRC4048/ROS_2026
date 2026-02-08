@@ -11,6 +11,36 @@ from redshift_odometry.TagTable import *
 from redshift_odometry.CamTable import *
  	 	  
 def generate_launch_description():
+   """
+    Generates a ROS2 LaunchDescription to initialize the vision and odometry pipeline.
+    THIS IS THE ROS2 LAUNCH ENTRY POINT!
+
+    The pipeline includes camera driver, image rectification, AprilTag detection, pose estimation.
+    We utilize Composable Nodes for efficient image processing and  conditional
+    logic to handle different hardware (Logitech/Arducam) and multi-camera instances.
+
+    Args:
+        camera_instance (LaunchArgument): The namespace and frame ID for the camera
+            (e.g., 'cam1', 'cam2'). Defaults to 'cam1'.
+        camera_type (LaunchArgument): The hardware driver selector. 
+            'L' for Logitech (30fps), 'A' for Arducam (60fps). Defaults to 'L'.
+
+    Nodes Started:
+        1. ComposableNodeContainer: Houses the 'cam_driver' and 'rectify' nodes.
+        2. apriltag_node: Performs AprilTag detection using instance-specific YAMLs.
+        3. redshift_cam_node: Our odometry node for robot pose calculation.
+        4. static_transform_publisher: Static transforms defining robot-to-camera and 
+           world-to-tag spatial relationships based on CamTable and TagTable.
+
+    Returns:
+        launch.LaunchDescription: The complete description of nodes, arguments, 
+            and transformations to be executed by the ROS2 launch system.
+
+    Note:
+        This function relies on external configuration tables (`CamTable`, `TagTable`)
+        and expects AprilTag parameter files to exist at absolute paths on the 
+        filesystem (e.g., `/redshift/ros2_ws/misc/`).
+    """
    ld = LaunchDescription()
 
    # to launch different file for each camera use:
@@ -164,8 +194,12 @@ def generate_launch_description():
    )
 
 
-   # BZ - TODO - the following 4 lines as well as create_** functions should be deleted from here and we should start static_tf_launch.py for tag transformations
-   # kept it here because Docker --network=host did not seem to share network.
+   # Creation of the static transforms should probably be in a separate launch file.
+   # I kept it here for now because Docker --network=host did not seem to share network.
+   
+   # the following are only needed for diagnostics when I run on my Dell and developing code
+   # For competition this should be commented out, the pose calculation uses the TagTable.py directly.
+   
    #for tag_entry in TagTable.tag_table:
    #   ld.add_action(create_transform_node(tag_entry))      
    
