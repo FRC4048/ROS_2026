@@ -52,12 +52,12 @@ def generate_launch_description():
    camera_type_arg = DeclareLaunchArgument('camera_type', default_value='L', description='camera type')
    
    # temp for testing on my Dell
-   #parameter_file_path_cam1 = "/home/redshift/ros2_ws_2025/misc/apriltag_cam1.yaml"
-   #parameter_file_path_cam2 = "/home/redshift/ros2_ws_2025/misc/apriltag_cam2.yaml"
+   parameter_file_path_cam1 = "/home/redshift/ros2_ws/misc/apriltag_cam1.yaml"
+   parameter_file_path_cam2 = "/home/redshift/ros2_ws/misc/apriltag_cam2.yaml"
 
    # real for running on the Pi   
-   parameter_file_path_cam1 = "/redshift/ros2_ws/misc/apriltag_cam1.yaml"
-   parameter_file_path_cam2 = "/redshift/ros2_ws/misc/apriltag_cam2.yaml" 
+   #parameter_file_path_cam1 = "/redshift/ros2_ws/misc/apriltag_cam1.yaml"
+   #parameter_file_path_cam2 = "/redshift/ros2_ws/misc/apriltag_cam2.yaml" 
 
 
    logitech_comp = ComposableNode(
@@ -87,7 +87,7 @@ def generate_launch_description():
                              namespace=camera_instance,
                              remappings=[(  PathJoinSubstitution(['/',camera_instance,'image_raw'])   ,   PathJoinSubstitution(['/',camera_instance,'image'])  )],
                              parameters=[
-                                {'video_device': '/dev/video0'},
+                                {'video_device': '/dev/video4'},
                                 {'camera_name': 'arducam_cam'},
                                 {'frame_id': camera_instance},
                                 {'brightness': -16},
@@ -194,17 +194,14 @@ def generate_launch_description():
    )
 
 
+
    # Creation of the static transforms should probably be in a separate launch file.
    # I kept it here for now because Docker --network=host did not seem to share network.
+   # These lines should be uncommented when running on the rpi
+   # when running on Dell, it is better to use ros2 launch redshift_odometry static-launch.py (you'll get tag transforms)
    
-   # the following are only needed for diagnostics when I run on my Dell and developing code
-   # For competition this should be commented out, the pose calculation uses the TagTable.py directly.
-   
-   #for tag_entry in TagTable.tag_table:
-   #   ld.add_action(create_transform_node(tag_entry))      
-   
-   for cam_entry in CamTable.cam_table:
-      ld.add_action(create_robot_to_cam_node(cam_entry))   
+   #for cam_entry in CamTable.cam_table:
+   #   ld.add_action(create_robot_to_cam_node(cam_entry))   
 
    ld.add_action(camera_instance_arg)
    ld.add_action(camera_type_arg)  
@@ -244,39 +241,4 @@ def create_robot_to_cam_node(entry):
       respawn_delay=2   
    )
    return(nd)
-
-   
-def create_transform_node(entry):
-   # Create a static transform from world to a tag
-   # The rotation is applied in a weired order.....Z-Y-X  Yaw-Pitch-Roll 
-   # Positive is clockwise (right hand rule)
-   tag   = entry["tagid"]
-   x     = entry["x"]
-   y     = entry["y"]
-   z     = entry["z"]
-   roll  = math.radians(entry["roll"])
-   pitch = math.radians(entry["pitch"])
-   yaw   = math.radians(entry["yaw"])
-               
-   nd = Node(
-      package='tf2_ros',
-      executable='static_transform_publisher',
-      name='tag'+str(tag),
-      output='screen',
-      arguments=[
-         '--x', str(x),
-         '--y', str(y),
-         '--z', str(z),
-         '--roll', str(roll),
-         '--pitch', str(pitch),
-         '--yaw', str(yaw),
-         '--frame-id', 'world',
-         '--child-frame-id', 'tag'+str(tag)
-      ],
-      respawn=True,
-      respawn_delay=2   
-   )
-   return(nd)   
-   
-   
    
