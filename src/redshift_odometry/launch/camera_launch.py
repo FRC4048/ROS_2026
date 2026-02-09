@@ -87,7 +87,7 @@ def generate_launch_description():
                              namespace=camera_instance,
                              remappings=[(  PathJoinSubstitution(['/',camera_instance,'image_raw'])   ,   PathJoinSubstitution(['/',camera_instance,'image'])  )],
                              parameters=[
-                                {'video_device': '/dev/video4'},
+                                {'video_device': '/dev/video0'},
                                 {'camera_name': 'arducam_cam'},
                                 {'frame_id': camera_instance},
                                 {'brightness': -16},
@@ -200,8 +200,8 @@ def generate_launch_description():
    # These lines should be uncommented when running on the rpi
    # when running on Dell, it is better to use ros2 launch redshift_odometry static-launch.py (you'll get tag transforms)
    
-   #for cam_entry in CamTable.cam_table:
-   #   ld.add_action(create_robot_to_cam_node(cam_entry))   
+   for cam_entry in CamTable.cam_table:
+      ld.add_action(create_robot_to_cam_node(cam_entry))   
 
    ld.add_action(camera_instance_arg)
    ld.add_action(camera_type_arg)  

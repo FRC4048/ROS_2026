@@ -1,26 +1,24 @@
 import yaml
 import os
-import logging
+from ament_index_python.packages import get_package_share_directory
 
+class CamTable:
 
-class CamTable():
-
-    # canonical location inside the container
-    CAMTABLE_PATH = "/ros2_ws/config/camtable.yaml"
-
-    # module-level logger
-    logger = logging.getLogger("CamTable")
+    CAMTABLE_PATH = os.path.join(
+        get_package_share_directory("redshift_odometry"),
+        "config",
+        "camtable.yaml"
+    )
 
     # this will be populated from YAML
     cam_table = []
 
     @staticmethod
     def load_cam_table():
+        print(f"Camera table loaded from {CamTable.CAMTABLE_PATH}")
+
         if not os.path.exists(CamTable.CAMTABLE_PATH):
-            CamTable.logger.error(
-                "Camera table YAML not found at %s",
-                CamTable.CAMTABLE_PATH
-            )
+            print(f"ERROR: Camera table YAML not found at {CamTable.CAMTABLE_PATH}")
             raise FileNotFoundError(
                 f"Camera table YAML not found at {CamTable.CAMTABLE_PATH}"
             )
@@ -29,9 +27,7 @@ class CamTable():
             data = yaml.safe_load(f)
 
         if data is None or "cameras" not in data:
-            CamTable.logger.error(
-                "Invalid camera table YAML: missing 'cameras' key"
-            )
+            print("ERROR: Invalid camera table YAML: missing 'cameras' key")
             raise ValueError(
                 "Invalid camera table YAML: missing 'cameras' key"
             )
@@ -39,12 +35,7 @@ class CamTable():
         CamTable.cam_table = data["cameras"]
 
         profile = data.get("profile", "unknown")
-
-        CamTable.logger.info(
-            "Loaded camera profile '%s' with %d cameras",
-            profile,
-            len(CamTable.cam_table)
-        )
+        print(f"Loaded camera profile '{profile}' with {len(CamTable.cam_table)} cameras")
 
     @staticmethod
     def compound_quat(entry):
@@ -66,3 +57,4 @@ class CamTable():
 
 # load the table at import time (same behavior as before)
 CamTable.load_cam_table()
+
