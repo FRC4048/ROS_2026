@@ -14,10 +14,10 @@ cp -r src contents/ros2_ws
 cp install/* contents/ros2_ws/install
 
 # select FRONT RPi camera configuration
-cp misc/camera/front_rpi_camera.yaml contents/ros2_ws/redshift_odometry/config/camtable.yaml
+cp misc/front_rpi_cam.yaml contents/ros2_ws/redshift_odometry/config/camtable.yaml
 
-cp misc/camera/apriltag_cam1.yaml contents/ros2_ws_redshift_odometry_config/apriltag_cam1.yaml
-cp misc/camera/apriltag_cam2.yaml contents/ros2_ws_redshift_odometry_config/apriltag_cam2.yaml
+cp misc/apriltag_cam1.yaml contents/ros2_ws/redshift_odometry/config/apriltag_cam1.yaml
+cp misc/apriltag_cam2.yaml contents/ros2_ws/redshift_odometry/config/apriltag_cam2.yaml
 
 cp redshift_entrypoint.sh contents
 cp start-*.sh contents
