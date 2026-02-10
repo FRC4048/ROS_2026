@@ -9,6 +9,7 @@ from launch.conditions import IfCondition
 from launch.substitutions import PythonExpression, PathJoinSubstitution
 from redshift_odometry.TagTable import *
 from redshift_odometry.CamTable import *
+from ament_index_python.packages import get_package_share_directory
  	 	  
 def generate_launch_description():
    """
@@ -51,14 +52,10 @@ def generate_launch_description():
    camera_type  = LaunchConfiguration('camera_type')            # L for logitech, A for arducam
    camera_type_arg = DeclareLaunchArgument('camera_type', default_value='L', description='camera type')
    
-   # temp for testing on my Dell
-   parameter_file_path_cam1 = "/home/redshift/ros2_ws/misc/apriltag_cam1.yaml"
-   parameter_file_path_cam2 = "/home/redshift/ros2_ws/misc/apriltag_cam2.yaml"
-
-   # real for running on the Pi   
-   #parameter_file_path_cam1 = "/redshift/ros2_ws/misc/apriltag_cam1.yaml"
-   #parameter_file_path_cam2 = "/redshift/ros2_ws/misc/apriltag_cam2.yaml" 
-
+   # Get the base directory of the package and construct the path to apriltag yaml
+   pkg_share = get_package_share_directory('redshift_odometry')
+   parameter_file_path_cam1 = os.path.join(pkg_share, 'config', 'apriltag_cam1.yaml')
+   parameter_file_path_cam2 = os.path.join(pkg_share, 'config', 'apriltag_cam2.yaml')
 
    logitech_comp = ComposableNode(
                              package='usb_cam',
