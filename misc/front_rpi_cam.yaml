@@ -2,13 +2,13 @@ profile: front_rpi
 
 cameras:
   - camid: cam1
-    x: 0.3015
-    y: -0.251
-    z: 0.18
-    qx: 0.0434534
-    qy: -0.0870728
-    qz: 0.0038017
-    qw: 0.9952465
+    x: 0
+    y: 0
+    z: 0
+    qx: 0.0
+    qy: 0.0
+    qz: 0.0
+    qw: 1.0
     # last year's reef camera: 10 left, 5 up
     # I don't know the offsets of the cameras for this year yet....
 
@@ -21,3 +21,10 @@ cameras:
     qz: 0.0
     qw: 0.9902681
     # last year's under climber cam: 16 right
+
+
+    #  last year's reef camera: 10 left, 5 up (roll=5, pitch=-10, yaw=0)
+    #    qx: 0.0434534
+    #  qy: -0.0870728
+    #  qz: 0.0038017
+    #  qw: 0.9952465
