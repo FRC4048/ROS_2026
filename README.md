@@ -18,13 +18,34 @@ April tag code for 2026
 From the terminal (Raspberry Pi IP may be different than shown):
 
 ```bash
-./build.sh
-scp frc4048-ros2.tar pi@10.40.48.200:
+./build_front.sh
+scp frc4048-ros2-front.tar pi@10.40.48.200:
 scp docker-compose.yaml pi@10.40.48.200:
 ssh pi@10.40.48.200
-docker load -i frc4048-ros2.tar
+docker load -i frc4048-ros2-front.tar
 docker compose down
 docker compose up
+```
+
+Cleaning up old images on the rpi:
+if the following shows many old images
+```bash
+docker images
+```
+you can do some cleanup (images take space):
+```bash
+docker images prune -a
+docker load -i frc4048-ros2-front.tar
+```
+
+If you then want to connect to any container and display ROS topics:
+```bash
+ssh pi@10.40.48.200
+docker compose ps
+docker execute -it camera1 /bin/bash
+source /opt/ros/humble/setup.bash
+source ros2-ws/install/setup.bash
+ros2 topic list
 ```
 
 ---
