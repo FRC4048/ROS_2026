@@ -120,6 +120,9 @@ class TransformNode(Node):
              angles = tft.euler_from_quaternion([tf_wr.transform.rotation.x, tf_wr.transform.rotation.y,
               					 tf_wr.transform.rotation.z, tf_wr.transform.rotation.w], axes='szyx')
      
+             # Step 4.5: Calculate camera-to-tag angle
+             cam_to_tag_yaw = self.calculate_cam_to_tag_angle(tag)
+     
              # Step 5: Construct and publish custom Odometry message
              pose_message = RoborioOdometry()
              pose_message.tag = tag
@@ -127,6 +130,7 @@ class TransformNode(Node):
              pose_message.y = tf_wr.transform.translation.y
              pose_message.yaw = math.degrees(angles[0])
              pose_message.distance = distance
+             pose_message.cam_to_tag_yaw = cam_to_tag_yaw
              pose_message.header.stamp = tf_tr.header.stamp 
              pose_message.header.frame_id = tf_tr.header.frame_id
              self.pose_publisher.publish(pose_message)
@@ -221,7 +225,34 @@ class TransformNode(Node):
        trans_ac.transform.rotation.z = quat_ac[2]       
        trans_ac.transform.rotation.w = quat_ac[3]    
        
-       return trans_ac   
+       return trans_ac
+
+    def calculate_cam_to_tag_angle(self, tag):
+        """
+        Calculate camera-to-tag angle in degrees using direct TF2 lookup.
+        
+        Args:
+            tag (int): The AprilTag ID
+            
+        Returns:
+            float: Camera-to-tag angle in degrees
+        """
+        try:
+            # Direct TF2 lookup: camera->tag
+            tagid = "tag" + str(tag) + self.cam_id
+            tf_cam_tag = self.tf_buffer.lookup_transform(self.cam_id, tagid, rclpy.time.Time(), Duration(seconds = 0.0))
+            
+            # Extract camera-to-tag angle
+            cam_angles = tft.euler_from_quaternion([tf_cam_tag.transform.rotation.x,
+                                                   tf_cam_tag.transform.rotation.y,
+                                                   tf_cam_tag.transform.rotation.z,
+                                                   tf_cam_tag.transform.rotation.w], axes='szyx')
+            return math.degrees(cam_angles[0])
+        except Exception as e:
+            if (self.debug > 0):
+                self.get_logger().info(f'Could not calculate cam-to-tag angle: {e}')
+            return 0.0
+
 
     # -----------------------------------------------------------------------------------------
     # Helper function to convert a quaternion to DCM

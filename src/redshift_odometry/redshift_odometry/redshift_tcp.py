@@ -50,7 +50,7 @@ class TcpClientNode(Node):
 
     Protocol (Binary):
         The data is packed using Big-Endian (`!`) byte order:
-        - 5 Doubles (8-byte floats): x, y, yaw, distance, latency.
+        - 6 Doubles (8-byte floats): x, y, yaw, distance, cam_to_tag_yaw, latency.
         - 1 Integer (4-byte int): tag ID.
     """
 
@@ -103,12 +103,13 @@ class TcpClientNode(Node):
         # calculate latency
         diff = self.get_clock().now() - rclpy.time.Time.from_msg(pose_msg.header.stamp)
         latency = round(diff.nanoseconds / 1e6)  # latency is in milliSeconds
-        # Create message buffer with POSE (x, y, theta), DISTANCE of robot to tag, and the TAG
+        # Create message buffer with POSE (x, y, theta), DISTANCE of robot to tag, CAM_TO_TAG_YAW, LATENCY, and the TAG
         msg = [
             pose_msg.x,
             pose_msg.y,
             pose_msg.yaw,
             pose_msg.distance,
+            pose_msg.cam_to_tag_yaw,
             latency,
             pose_msg.tag,
         ]
