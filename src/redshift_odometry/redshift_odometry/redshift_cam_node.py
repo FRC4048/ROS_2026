@@ -109,7 +109,8 @@ class TransformNode(Node):
              
              # Step 3: calculate distance between robot and tag
              distance = math.sqrt((TagTable.tag_table[tag]["x"] - tf_wr.transform.translation.x) ** 2 + 
-                                  (TagTable.tag_table[tag]["y"] - tf_wr.transform.translation.y) ** 2)
+                                  (TagTable.tag_table[tag]["y"] - tf_wr.transform.translation.y) ** 2 +
+                                  (TagTable.tag_table[tag]["z"] - tf_wr.transform.translation.z) ** 2)
              
              # pack in TFMessage and publish (debug)
              if (self.debug):
