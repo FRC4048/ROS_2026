@@ -229,25 +229,65 @@ class TransformNode(Node):
 
     def calculate_cam_to_tag_angle(self, tag):
         """
-        Calculate camera-to-tag angle in degrees using direct TF2 lookup.
+        Calculate angle between camera-to-tag line and tag perpendicular (normal vector).
+        
+        This gives the approach angle - how directly the camera is facing the tag.
+        0° = camera directly perpendicular to tag surface
+        90° = camera parallel to tag surface
         
         Args:
             tag (int): The AprilTag ID
             
         Returns:
-            float: Camera-to-tag angle in degrees
+            float: Angle in degrees between camera-to-tag line and tag normal
         """
         try:
             # Direct TF2 lookup: camera->tag
             tagid = "tag" + str(tag) + self.cam_id
             tf_cam_tag = self.tf_buffer.lookup_transform(self.cam_id, tagid, rclpy.time.Time(), Duration(seconds = 0.0))
             
-            # Extract camera-to-tag angle
-            cam_angles = tft.euler_from_quaternion([tf_cam_tag.transform.rotation.x,
-                                                   tf_cam_tag.transform.rotation.y,
-                                                   tf_cam_tag.transform.rotation.z,
-                                                   tf_cam_tag.transform.rotation.w], axes='szyx')
-            return math.degrees(cam_angles[0])
+            # Get camera-to-tag position vector (from camera to tag)
+            cam_to_tag_vector = np.array([
+                tf_cam_tag.transform.translation.x,
+                tf_cam_tag.transform.translation.y,
+                tf_cam_tag.transform.translation.z
+            ])
+            
+            # Normalize the vector
+            if np.linalg.norm(cam_to_tag_vector) > 0:
+                cam_to_tag_vector = cam_to_tag_vector / np.linalg.norm(cam_to_tag_vector)
+            else:
+                return 0.0
+            
+            # Get tag's normal vector (perpendicular to tag surface)
+            # In AprilTag convention, the tag's Z-axis points outward (perpendicular to tag)
+            # Extract Z-axis from the tag's rotation matrix
+            quat = [tf_cam_tag.transform.rotation.x,
+                   tf_cam_tag.transform.rotation.y,
+                   tf_cam_tag.transform.rotation.z,
+                   tf_cam_tag.transform.rotation.w]
+            
+            # Convert quaternion to rotation matrix
+            rotation_matrix = tft.quaternion_matrix(quat)
+            
+            # Tag's normal vector is the Z-axis of the tag frame (0, 0, 1) transformed to camera frame
+            tag_normal = rotation_matrix[0:3, 2]  # Third column is Z-axis
+            
+            # Calculate angle between vectors using dot product
+            # angle = arccos(dot(v1, v2) / (|v1| * |v2|))
+            dot_product = np.dot(cam_to_tag_vector, tag_normal)
+            
+            # Clamp to avoid numerical errors with arccos
+            dot_product = np.clip(dot_product, -1.0, 1.0)
+            
+            angle_rad = np.arccos(dot_product)
+            angle_deg = math.degrees(angle_rad)
+            
+            if (self.debug > 1):
+                self.get_logger().info(f'Tag {tag}: cam_to_tag_vector={cam_to_tag_vector}, tag_normal={tag_normal}, angle={angle_deg:.2f}°')
+            
+            return angle_deg
+            
         except Exception as e:
             if (self.debug > 0):
                 self.get_logger().info(f'Could not calculate cam-to-tag angle: {e}')
