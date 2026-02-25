@@ -27,6 +27,7 @@ import rclpy
 import time
 import socket
 import struct
+import math
 from rclpy.node import Node
 from std_msgs.msg import String
 from roborio_msgs.msg import RoborioOdometry
@@ -50,7 +51,7 @@ class TcpClientNode(Node):
 
     Protocol (Binary):
         The data is packed using Big-Endian (`!`) byte order:
-        - 6 Doubles (8-byte floats): x, y, yaw, distance, cam_to_tag_yaw, latency.
+        - 7 Doubles (8-byte floats): x, y, yaw, distance, cam_to_tag_yaw, latency, std_deviation.
         - 1 Integer (4-byte int): tag ID.
     """
 
@@ -95,6 +96,7 @@ class TcpClientNode(Node):
         Processes incoming pose messages and transmits them via TCP.
 
         Calculates the latency between the message timestamp and current time,
+        calculates standard deviation based on distance and angle,
         packs the message components into a binary buffer, and sends it.
 
         Args:
@@ -103,7 +105,21 @@ class TcpClientNode(Node):
         # calculate latency
         diff = self.get_clock().now() - rclpy.time.Time.from_msg(pose_msg.header.stamp)
         latency = round(diff.nanoseconds / 1e6)  # latency is in milliSeconds
-        # Create message buffer with POSE (x, y, theta), DISTANCE of robot to tag, CAM_TO_TAG_YAW, LATENCY, and the TAG
+        
+        # calculate standard deviation: std = d² × constant / cos(a)
+        # where d is distance in meters, a is angle in radians, constant is 1.0/148.0
+        constant = 1.0 / 148.0
+        distance = pose_msg.distance
+        angle = pose_msg.cam_to_tag_yaw
+        
+        # Avoid division by zero and handle edge cases
+        cos_angle = math.cos(angle)
+        if abs(cos_angle) < 1e-6:  # Prevent division by very small numbers
+            cos_angle = 1e-6 if cos_angle >= 0 else -1e-6
+        
+        std_deviation = (distance * distance) * constant / cos_angle
+        
+        # Create message buffer with POSE (x, y, theta), DISTANCE of robot to tag, CAM_TO_TAG_YAW, LATENCY, STD_DEVIATION, and the TAG
         msg = [
             pose_msg.x,
             pose_msg.y,
@@ -111,6 +127,7 @@ class TcpClientNode(Node):
             pose_msg.distance,
             pose_msg.cam_to_tag_yaw,
             latency,
+            std_deviation,
             pose_msg.tag,
         ]
         format_string = "!{}d{}i".format(len(msg) - 1, 1)
