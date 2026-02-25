@@ -106,16 +106,17 @@ class TcpClientNode(Node):
         diff = self.get_clock().now() - rclpy.time.Time.from_msg(pose_msg.header.stamp)
         latency = round(diff.nanoseconds / 1e6)  # latency is in milliSeconds
         
-        # calculate standard deviation: std = d² × constant / cos(a)
+        # calculate standard deviation: std = d² × constant / |cos(a)|
         # where d is distance in meters, a is angle in radians, constant is 1.0/148.0
+        # Use absolute value of cos to ensure positive standard deviation
         constant = 1.0 / 148.0
         distance = pose_msg.distance
         angle = pose_msg.cam_to_tag_yaw
         
-        # Avoid division by zero and handle edge cases
-        cos_angle = math.cos(angle)
-        if abs(cos_angle) < 1e-6:  # Prevent division by very small numbers
-            cos_angle = 1e-6 if cos_angle >= 0 else -1e-6
+        # Use absolute value of cosine to ensure positive standard deviation
+        cos_angle = abs(math.cos(angle))
+        if cos_angle < 1e-6:  # Prevent division by very small numbers
+            cos_angle = 1e-6
         
         std_deviation = (distance * distance) * constant / cos_angle
         
