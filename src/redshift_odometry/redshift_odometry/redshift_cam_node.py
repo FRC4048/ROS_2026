@@ -227,6 +227,15 @@ class TransformNode(Node):
        
        return trans_ac
 
+    @staticmethod
+    def angle_from_tag_to_cam_vector(vx: float, vy: float, vz: float) -> float:
+        v_norm = math.sqrt(vx * vx + vy * vy + vz * vz)
+        if v_norm <= 1e-12:
+            return 0.0
+
+        v_xy = math.sqrt(vx * vx + vy * vy)
+        return math.degrees(math.atan2(v_xy, vz))
+
     def calculate_cam_to_tag_angle(self, tag, tf_tr):
         """
         Calculate angle between camera-to-tag line and tag perpendicular (normal vector).
@@ -243,46 +252,51 @@ class TransformNode(Node):
             float: Angle in degrees between camera-to-tag line and tag normal
         """
         try:
-            # Use existing tag->robot transform to calculate camera-to-tag angle
-            # We need to get camera's viewing direction relative to tag
-            
-            # Extract rotation from tag->robot transform
-            quat = [tf_tr.transform.rotation.x,
-                   tf_tr.transform.rotation.y,
-                   tf_tr.transform.rotation.z,
-                   tf_tr.transform.rotation.w]
-            
-            # Convert quaternion to rotation matrix
-            rotation_matrix = tft.quaternion_matrix(quat)
-            
-            # Camera's viewing direction in tag frame (try X-axis for forward)
-            # Transform camera's forward vector to tag frame
-            camera_forward_tag = rotation_matrix[0:3, 0:3] @ np.array([1.0, 0.0, 0.0])
-            
-            # Tag's normal vector in tag frame (tag Z-axis points toward camera)
-            tag_normal = np.array([0.0, 0.0, 1.0])
-            
-            # Calculate angle between vectors using dot product
-            dot_product = np.dot(camera_forward_tag, tag_normal)
-            
-            # Clamp to avoid numerical errors with arccos
-            dot_product = np.clip(dot_product, -1.0, 1.0)
-            
-            angle_rad = np.arccos(dot_product)
-            angle_deg = math.degrees(angle_rad)
-            
-            # Adjust angle: 167° when facing tag should become 0°
-            # This makes 0° = camera facing tag directly
-            if angle_deg > 90.0:
-                angle_deg = 180.0 - angle_deg
-            
+            tag_frame = "tag" + str(tag) + self.cam_id
+            cam_frame = self.cam_id
+
+            # Preferred: look up tag -> camera directly and use the translation vector.
+            try:
+                tf_tc = self.tf_buffer.lookup_transform(tag_frame, cam_frame, rclpy.time.Time(), Duration(seconds=0.0))
+                vx = tf_tc.transform.translation.x
+                vy = tf_tc.transform.translation.y
+                vz = tf_tc.transform.translation.z
+            except Exception:
+                # Fallback: derive tag -> camera from tag -> robot (given) and robot -> camera.
+                tf_rc = self.tf_buffer.lookup_transform('robot', cam_frame, rclpy.time.Time(), Duration(seconds=0.0))
+
+                # Translation in tag frame:
+                # p_tag->cam = p_tag->robot + R_tag->robot * p_robot->cam
+                p_tr = np.array([
+                    tf_tr.transform.translation.x,
+                    tf_tr.transform.translation.y,
+                    tf_tr.transform.translation.z
+                ])
+
+                q_tr = [
+                    tf_tr.transform.rotation.x,
+                    tf_tr.transform.rotation.y,
+                    tf_tr.transform.rotation.z,
+                    tf_tr.transform.rotation.w
+                ]
+                r_tr = tft.quaternion_matrix(q_tr)[0:3, 0:3]
+
+                p_rc = np.array([
+                    tf_rc.transform.translation.x,
+                    tf_rc.transform.translation.y,
+                    tf_rc.transform.translation.z
+                ])
+
+                p_tc = p_tr + (r_tr @ p_rc)
+                vx, vy, vz = float(p_tc[0]), float(p_tc[1]), float(p_tc[2])
+
+            angle_deg = self.angle_from_tag_to_cam_vector(vx, vy, vz)
+
             # Detailed debug logging
             if (self.debug > 0):
-                self.get_logger().info(f'Tag {tag}: quat={quat}')
-                self.get_logger().info(f'Tag {tag}: rotation_matrix=\n{rotation_matrix[0:3, 0:3]}')
-                self.get_logger().info(f'Tag {tag}: camera_forward_tag={camera_forward_tag}, tag_normal={tag_normal}')
-                self.get_logger().info(f'Tag {tag}: dot_product={dot_product:.6f}, angle={angle_deg:.2f}°')
-            
+                self.get_logger().info(f'Tag {tag}: tag_frame={tag_frame}, cam_frame={cam_frame}')
+                self.get_logger().info(f'Tag {tag}: v_tag_to_cam=[{vx:.4f}, {vy:.4f}, {vz:.4f}], angle={angle_deg:.2f}°')
+
             return angle_deg
             
         except Exception as e:
