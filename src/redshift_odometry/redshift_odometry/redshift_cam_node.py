@@ -255,9 +255,9 @@ class TransformNode(Node):
             # Convert quaternion to rotation matrix
             rotation_matrix = tft.quaternion_matrix(quat)
             
-            # Camera's viewing direction in tag frame (camera Z-axis = [0,0,1] in camera frame)
-            # Transform camera's forward vector to tag frame, then invert it
-            camera_forward_tag = -(rotation_matrix[0:3, 0:3] @ np.array([0.0, 0.0, 1.0]))
+            # Camera's viewing direction in tag frame (try Y-axis instead of Z-axis)
+            # Transform camera's forward vector to tag frame
+            camera_forward_tag = rotation_matrix[0:3, 0:3] @ np.array([0.0, 1.0, 0.0])
             
             # Tag's normal vector in tag frame (tag Z-axis points toward camera)
             tag_normal = np.array([0.0, 0.0, 1.0])
