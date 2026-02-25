@@ -58,6 +58,10 @@ class TcpClientNode(Node):
     def __init__(self):
         super().__init__("tcp_client_node")
 
+        # Declare vision_constant parameter
+        self.declare_parameter('vision_constant', 1.0/148.0)
+        self.vision_constant = 1.0/148.0  # Local cache of the parameter
+
         # Set up TCP connection parameters
         # self.server_ip = '192.168.1.230'
         self.server_ip = "10.40.48.2"
@@ -70,7 +74,18 @@ class TcpClientNode(Node):
             RoborioOdometry, "/pose", self.tcp_callback, 10
         )
 
+        # Create timer to update vision_constant parameter every 5 seconds
+        self.param_timer = self.create_timer(5.0, self.update_vision_constant)
+
         self.connect_to_server()
+
+    def update_vision_constant(self):
+        """Update local vision_constant from parameter server every 5 seconds."""
+        try:
+            self.vision_constant = self.get_parameter('vision_constant').value
+        except Exception as e:
+            self.get_logger().warning(f'Failed to read vision_constant parameter: {e}')
+            # Keep using last known value if parameter read fails
 
     def connect_to_server(self):
         """
@@ -107,9 +122,8 @@ class TcpClientNode(Node):
         latency = round(diff.nanoseconds / 1e6)  # latency is in milliSeconds
         
         # calculate standard deviation: std = d² × constant / |cos(a)|
-        # where d is distance in meters, a is angle in radians, constant is 1.0/148.0
+        # where d is distance in meters, a is angle in radians, constant is vision_constant
         # Use absolute value of cos to ensure positive standard deviation
-        constant = 1.0 / 148.0
         distance = pose_msg.distance
         angle = pose_msg.cam_to_tag_yaw
         
@@ -118,7 +132,7 @@ class TcpClientNode(Node):
         if cos_angle < 1e-6:  # Prevent division by very small numbers
             cos_angle = 1e-6
         
-        std_deviation = (distance * distance) * constant / cos_angle
+        std_deviation = (distance * distance) * self.vision_constant / cos_angle
         
         # Create message buffer with POSE (x, y, theta), DISTANCE of robot to tag, CAM_TO_TAG_YAW, LATENCY, STD_DEVIATION, and the TAG
         msg = [
