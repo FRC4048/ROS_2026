@@ -292,16 +292,9 @@ class TransformNode(Node):
 
             angle_deg = self.angle_from_tag_to_cam_vector(vx, vy, vz)
 
-            # Detailed debug logging
-            if (self.debug > 0):
-                self.get_logger().info(f'Tag {tag}: tag_frame={tag_frame}, cam_frame={cam_frame}')
-                self.get_logger().info(f'Tag {tag}: v_tag_to_cam=[{vx:.4f}, {vy:.4f}, {vz:.4f}], angle={angle_deg:.2f}°')
-
             return angle_deg
             
         except Exception as e:
-            if (self.debug > 0):
-                self.get_logger().info(f'Could not calculate cam-to-tag angle: {e}')
             return 0.0
 
 
