@@ -271,11 +271,12 @@ class TransformNode(Node):
             angle_rad = np.arccos(dot_product)
             angle_deg = math.degrees(angle_rad)
             
-            # No flipping needed - 0° means camera facing tag directly
-            
-            # Debug logging to track vector changes
-            if (self.debug > 1):
-                self.get_logger().info(f'Tag {tag}: camera_forward_tag={camera_forward_tag}, tag_normal={tag_normal}, angle={angle_deg:.2f}°')
+            # Detailed debug logging
+            if (self.debug > 0):
+                self.get_logger().info(f'Tag {tag}: quat={quat}')
+                self.get_logger().info(f'Tag {tag}: rotation_matrix=\n{rotation_matrix[0:3, 0:3]}')
+                self.get_logger().info(f'Tag {tag}: camera_forward_tag={camera_forward_tag}, tag_normal={tag_normal}')
+                self.get_logger().info(f'Tag {tag}: dot_product={dot_product:.6f}, angle={angle_deg:.2f}°')
             
             return angle_deg
             
