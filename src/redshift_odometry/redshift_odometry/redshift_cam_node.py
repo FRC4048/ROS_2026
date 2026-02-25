@@ -262,7 +262,7 @@ class TransformNode(Node):
             # Tag's normal vector in tag frame (tag Z-axis points toward camera)
             tag_normal = np.array([0.0, 0.0, 1.0])
             
-            # Calculate angle between camera viewing direction and tag normal
+            # Calculate angle between vectors using dot product
             dot_product = np.dot(camera_forward_tag, tag_normal)
             
             # Clamp to avoid numerical errors with arccos
@@ -270,6 +270,11 @@ class TransformNode(Node):
             
             angle_rad = np.arccos(dot_product)
             angle_deg = math.degrees(angle_rad)
+            
+            # Adjust angle: 167° when facing tag should become 0°
+            # This makes 0° = camera facing tag directly
+            if angle_deg > 90.0:
+                angle_deg = 180.0 - angle_deg
             
             # Detailed debug logging
             if (self.debug > 0):
