@@ -263,10 +263,10 @@ class TransformNode(Node):
             # Get tag's normal vector (perpendicular to tag surface)
             # In AprilTag convention, the tag's Z-axis points outward (perpendicular to tag)
             # Extract Z-axis from the tag's rotation matrix
-            quat = [tf_cam_tag.transform.rotation.x,
-                   tf_cam_tag.transform.rotation.y,
-                   tf_cam_tag.transform.rotation.z,
-                   tf_cam_tag.transform.rotation.w]
+            quat = [tf_tag_cam.transform.rotation.x,
+                   tf_tag_cam.transform.rotation.y,
+                   tf_tag_cam.transform.rotation.z,
+                   tf_tag_cam.transform.rotation.w]
             
             # Convert quaternion to rotation matrix
             rotation_matrix = tft.quaternion_matrix(quat)
