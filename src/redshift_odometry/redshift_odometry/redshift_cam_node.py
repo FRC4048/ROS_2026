@@ -244,17 +244,7 @@ class TransformNode(Node):
         """
         try:
             # Use existing tag->robot transform to calculate camera-to-tag angle
-            # We need to invert the transform to get robot->tag, then account for camera offset
-            
-            # Extract position from tag->robot transform
-            tag_to_robot = np.array([
-                tf_tr.transform.translation.x,
-                tf_tr.transform.translation.y, 
-                tf_tr.transform.translation.z
-            ])
-            
-            # Get robot->tag by negating the position
-            robot_to_tag = -tag_to_robot
+            # We need to get camera's viewing direction relative to tag
             
             # Extract rotation from tag->robot transform
             quat = [tf_tr.transform.rotation.x,
@@ -265,34 +255,15 @@ class TransformNode(Node):
             # Convert quaternion to rotation matrix
             rotation_matrix = tft.quaternion_matrix(quat)
             
-            # Transform robot_to_tag vector from tag frame to world frame
-            robot_to_tag_world = rotation_matrix[0:3, 0:3] @ robot_to_tag
+            # Camera's viewing direction in tag frame (camera Z-axis = [0,0,1] in camera frame)
+            # Transform camera's forward vector to tag frame
+            camera_forward_tag = rotation_matrix[0:3, 0:3] @ np.array([0.0, 0.0, 1.0])
             
-            # Get tag's known position in world frame from TagTable
-            tag_pos_world = np.array([
-                TagTable.tag_table[tag]["x"],
-                TagTable.tag_table[tag]["y"],
-                0.0  # Tags are on floor (z=0)
-            ])
-            
-            # Calculate camera position in world frame
-            # camera_pos = tag_pos_world + robot_to_tag_world
-            camera_pos_world = tag_pos_world + robot_to_tag_world
-            
-            # Calculate camera-to-tag vector in world frame
-            cam_to_tag_vector = tag_pos_world - camera_pos_world
-            
-            # Normalize the vector
-            if np.linalg.norm(cam_to_tag_vector) > 0:
-                cam_to_tag_vector = cam_to_tag_vector / np.linalg.norm(cam_to_tag_vector)
-            else:
-                return 0.0
-            
-            # Tag's normal vector in world frame (pointing upward)
+            # Tag's normal vector in tag frame (tag Z-axis points toward camera)
             tag_normal = np.array([0.0, 0.0, 1.0])
             
-            # Calculate angle between vectors using dot product
-            dot_product = np.dot(cam_to_tag_vector, tag_normal)
+            # Calculate angle between camera viewing direction and tag normal
+            dot_product = np.dot(camera_forward_tag, tag_normal)
             
             # Clamp to avoid numerical errors with arccos
             dot_product = np.clip(dot_product, -1.0, 1.0)
@@ -300,13 +271,11 @@ class TransformNode(Node):
             angle_rad = np.arccos(dot_product)
             angle_deg = math.degrees(angle_rad)
             
-            # Convert to 0° when camera faces tag directly
-            if angle_deg > 90.0:
-                angle_deg = 180.0 - angle_deg
+            # No flipping needed - 0° means camera facing tag directly
             
             # Debug logging to track vector changes
             if (self.debug > 1):
-                self.get_logger().info(f'Tag {tag}: cam_to_tag_vector={cam_to_tag_vector}, tag_normal={tag_normal}, angle={angle_deg:.2f}°')
+                self.get_logger().info(f'Tag {tag}: camera_forward_tag={camera_forward_tag}, tag_normal={tag_normal}, angle={angle_deg:.2f}°')
             
             return angle_deg
             
