@@ -242,20 +242,21 @@ class TransformNode(Node):
             float: Angle in degrees between camera-to-tag line and tag normal
         """
         try:
-            # Direct TF2 lookup: camera->tag
+            # Direct TF2 lookup: tag->camera (reversed for more intuitive angle)
             tagid = "tag" + str(tag) + self.cam_id
-            tf_cam_tag = self.tf_buffer.lookup_transform(self.cam_id, tagid, rclpy.time.Time(), Duration(seconds = 0.0))
+            tf_tag_cam = self.tf_buffer.lookup_transform(tagid, self.cam_id, rclpy.time.Time(), Duration(seconds = 0.0))
             
-            # Get camera-to-tag position vector (from camera to tag)
-            cam_to_tag_vector = np.array([
-                tf_cam_tag.transform.translation.x,
-                tf_cam_tag.transform.translation.y,
-                tf_cam_tag.transform.translation.z
+            # Get tag-to-camera position vector (from tag to camera)
+            # This gives us the direction the camera is looking relative to the tag
+            tag_to_cam_vector = np.array([
+                tf_tag_cam.transform.translation.x,
+                tf_tag_cam.transform.translation.y,
+                tf_tag_cam.transform.translation.z
             ])
             
             # Normalize the vector
-            if np.linalg.norm(cam_to_tag_vector) > 0:
-                cam_to_tag_vector = cam_to_tag_vector / np.linalg.norm(cam_to_tag_vector)
+            if np.linalg.norm(tag_to_cam_vector) > 0:
+                tag_to_cam_vector = tag_to_cam_vector / np.linalg.norm(tag_to_cam_vector)
             else:
                 return 0.0
             
@@ -274,14 +275,17 @@ class TransformNode(Node):
             tag_normal = rotation_matrix[0:3, 2]  # Third column is Z-axis
             
             # Calculate angle between vectors using dot product
+            # Now using tag_to_camera vector for more intuitive results
             # angle = arccos(dot(v1, v2) / (|v1| * |v2|))
-            dot_product = np.dot(cam_to_tag_vector, tag_normal)
+            dot_product = np.dot(tag_to_cam_vector, tag_normal)
             
             # Clamp to avoid numerical errors with arccos
             dot_product = np.clip(dot_product, -1.0, 1.0)
             
             angle_rad = np.arccos(dot_product)
             angle_deg = math.degrees(angle_rad)
+            
+            # No need for angle flipping - 0° now means camera facing tag directly
             
             if (self.debug > 1):
                 self.get_logger().info(f'Tag {tag}: cam_to_tag_vector={cam_to_tag_vector}, tag_normal={tag_normal}, angle={angle_deg:.2f}°')
