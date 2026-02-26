@@ -132,10 +132,10 @@ class RedshiftLifesigns(Node):
         if (self.ros_publish == True):
            self.publisher.publish(self.lifesigns_counter)
     
-    def main(args=None):
-       rclpy.init(args=args)
-       publisher = RedshiftLifesigns()
-       rclpy.spin(publisher)
+def main(args=None):
+   rclpy.init(args=args)
+   publisher = RedshiftLifesigns()
+   rclpy.spin(publisher)
 
-if __name__ == '__main__':
+if __name__ == '__main__':s
     main()
