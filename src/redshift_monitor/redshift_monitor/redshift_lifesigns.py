@@ -133,9 +133,9 @@ class RedshiftLifesigns(Node):
            self.publisher.publish(self.lifesigns_counter)
     
 def main(args=None):
-   rclpy.init(args=args)
-   publisher = RedshiftLifesigns()
-   rclpy.spin(publisher)
+    rclpy.init(args=args)
+    publisher = RedshiftLifesigns()
+    rclpy.spin(publisher)
 
-if __name__ == '__main__':s
+if __name__ == '__main__':
     main()
