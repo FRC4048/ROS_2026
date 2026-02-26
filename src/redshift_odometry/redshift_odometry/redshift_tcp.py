@@ -29,7 +29,7 @@ import socket
 import struct
 import math
 from rclpy.node import Node
-from std_msgs.msg import String
+from std_msgs.msg import String, Float64
 from roborio_msgs.msg import RoborioOdometry
 
 
@@ -58,15 +58,23 @@ class TcpClientNode(Node):
     def __init__(self):
         super().__init__("tcp_client_node")
 
-        # Declare vision_constant parameter
-        self.declare_parameter('vision_constant', 1.0/148.0)
-        self.vision_constant = 1.0/148.0  # Local cache of the parameter
+        # Local cache of the constant
+        self.vision_constant = 1.0/148.0 
 
         # Set up TCP connection parameters
-        # self.server_ip = '192.168.1.230'
+        #self.server_ip = '192.168.2.191'
         self.server_ip = "10.40.48.2"
         self.server_port = 5806
         self.socket_connected = False
+
+
+        # Subscribe to vision_constant updates from the lifesigns node
+        self.vision_subscription = self.create_subscription(
+            Float64,
+            "/redshift/vision_constant",
+            self.vision_constant_callback,
+            10
+        )
 
 
         # Subscribe to the /pose topic and use callback to send data over tcp
@@ -74,18 +82,8 @@ class TcpClientNode(Node):
             RoborioOdometry, "/pose", self.tcp_callback, 10
         )
 
-        # Create timer to update vision_constant parameter every 5 seconds
-        self.param_timer = self.create_timer(5.0, self.update_vision_constant)
-
         self.connect_to_server()
 
-    def update_vision_constant(self):
-        """Update local vision_constant from parameter server every 5 seconds."""
-        try:
-            self.vision_constant = self.get_parameter('vision_constant').value
-        except Exception as e:
-            self.get_logger().warning(f'Failed to read vision_constant parameter: {e}')
-            # Keep using last known value if parameter read fails
 
     def connect_to_server(self):
         """
@@ -105,6 +103,12 @@ class TcpClientNode(Node):
                     f"Could not connect to socket: {e}. Trying again..."
                 )
                 time.sleep(1)
+                
+    def vision_constant_callback(self, msg):
+        """Update local cache whenever a new value is published on the topic."""
+        if msg.data != self.vision_constant:
+            self.vision_constant = msg.data
+                
 
     def tcp_callback(self, pose_msg):
         """
@@ -133,7 +137,6 @@ class TcpClientNode(Node):
             cos_angle = 1e-6
         
         std_deviation = (distance * distance) * self.vision_constant / cos_angle
-        
         # Create message buffer with POSE (x, y, theta), DISTANCE of robot to tag, CAM_TO_TAG_YAW, LATENCY, STD_DEVIATION, and the TAG
         msg = [
             pose_msg.x,
