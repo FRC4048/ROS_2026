@@ -1,9 +1,7 @@
 """
 redshift_lifesigns.py
 =====================
-This module contains the Redshift Lifesigns ROS2 node, which acts as a heartbeat 
-monitor for the robot system. It increments a counter and broadcasts it to 
-ROS2 topics and/or NetworkTables.
+This node contains our communication with network tables. 
 
 To start node:
     on rpi - started automatically from docker-compose.yaml
@@ -13,11 +11,11 @@ To start node:
         ros2 run redshift_monitor redshift_lifesigns
         then - from a different terminal check the messages:
         ros2 topic echo /redshift/lifesigns
+        ros2 topic echo /redshift/vision_constant
 
     note: if testing on the robot -  setServer(4048)
           if testing NOT on the robot - setServer("192.168.ip.where.NT.server.is.running")
 """
-
 
 import rclpy
 import os
@@ -30,24 +28,27 @@ from roborio_msgs.msg import RoborioTags
 
 class RedshiftLifesigns(Node):
     """
-    A ROS2 Node that manages system 'lifesigns' (heartbeats) and reads vision constants.
+    A ROS2 Node that manages system 'lifesigns' (heartbeats) and vision constant.
 
-    This node increments a counter every second and publishes it to ensure
-    communication links between RPi, RoboRIO, and Driver Station 
-    are active. It also reads vision_constant from NetworkTables and publishes
-    it to the parameter server for other nodes to use.
-
+    We have a 1.0 second timer callback that:
+    - Increments a counter
+    - Publishes the counter to NetworkTables
+    - Reads vision_constant from NetworkTables
+    - Publishes the vision_constant to ROS2 topic for other nodes to use
+    
     Attributes:
-        publisher (rclpy.publisher.Publisher): The ROS2 publisher for heartbeat data.
         lifesigns_pub (ntcore.DoublePublisher): The NetworkTable publisher for heartbeat data.
-        vision_constant_sub (ntcore.DoubleSubscriber): The NetworkTable subscriber for vision constant.
+        vision_constant_sub: The NetworkTable subscriber for vision constant.
+        vision_constant_publisher: The ROS2 publisher for vision constant.
+        lifesigns_counter (Uint16): The heartbeat counter message.
         vision_constant (float): Current vision constant value (default: 1/148).
     
     Publishes:
         /redshift/lifesigns (std_msgs.msg.UInt16): The current heartbeat count.
+        /redshift/vision_constant (std_msgs.msg.Float64): Vision constant from NetworkTables.
     
-    Parameters:
-        /redshift/vision_constant (double): Vision constant from NetworkTables for other nodes.
+    Subscribes (NetworkTables):
+        ROS/vision_constant (double): Vision constant value from NetworkTables.
     """
 
     def __init__(self):
@@ -59,7 +60,7 @@ class RedshiftLifesigns(Node):
         if (self.ros_publish):
            self.get_logger().info('Publishing to ROS')
 
-        # CREATE NETWORK TABLE CONNECTION AND PUBLISHER
+        # CREATE NETWORK TABLE CONNECTION AND PUBLISHERS
         self.inst = ntcore.NetworkTableInstance.getDefault()
         self.inst.startClient4("ROS Client")
         self.inst.setServerTeam(4048)
