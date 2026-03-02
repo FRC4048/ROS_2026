@@ -21,6 +21,7 @@ To start node:
 
 import rclpy
 import os
+import time
 from rclpy.node import Node
 from std_msgs.msg import UInt16, Float64
 import ntcore
@@ -64,7 +65,7 @@ class RedshiftLifesigns(Node):
         self.inst.setServerTeam(4048)
         #self.inst.setServer("192.168.2.191")
         while not self.inst.isConnected():
-            pass
+            time.sleep(0.1)
         self.get_logger().info("Connected to NETWORK TABLES")
         self.table = self.inst.getTable("ROS")
         self.inst.startDSClient()
