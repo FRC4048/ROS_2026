@@ -229,10 +229,19 @@ class TransformNode(Node):
 
     @staticmethod
     def angle_from_tag_to_cam_vector(vx: float, vy: float, vz: float) -> float:
+        """
+        Calculate the angle from the tag's normal vector to the camera.
+        
+        vx, vy, vz are the components of the vector from tag to camera from the tag's perspective.
+        tag is using coordinate system where +z is out of the tag surface (perpendicular to tag),
+        +x is to the left, and +y is up (LUF).
+        """
+        # calculate total vector magnitude
         v_norm = math.sqrt(vx * vx + vy * vy + vz * vz)
         if v_norm <= 1e-12:
             return 0.0
 
+        # calculate angle from z-axis (normal vector)
         v_xy = math.sqrt(vx * vx + vy * vy)
         return math.degrees(math.atan2(v_xy, vz))
 
