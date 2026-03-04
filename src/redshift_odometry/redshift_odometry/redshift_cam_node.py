@@ -265,6 +265,8 @@ class TransformNode(Node):
             cam_frame = self.cam_id
 
             # Preferred: look up tag -> camera directly and use the translation vector.
+            # I'm not sure if there's any change the AprilTag node tag->cam transform will not
+            # be available, so added the fallback just in case.
             try:
                 tf_tc = self.tf_buffer.lookup_transform(tag_frame, cam_frame, rclpy.time.Time(), Duration(seconds=0.0))
                 vx = tf_tc.transform.translation.x
