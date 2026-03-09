@@ -5,20 +5,22 @@ cameras:
     x: 0.257175
     y: -0.29845
     z: 0.3683
-    qx: 0.6963642
-    qy: 0.6963642
-    qz: 0.1227878
+    qx: -0.6963642
+    qy: -0.1227878
+    qz: 0.6963642
     qw: -0.1227878
     # this is the camera that is looking left A (intake is front)
     # camera A is looking left and tilted up 20 degrees (mounted upside down)
+    # In RDF coordinates, we do y=-90, z=180, x=-20
 
   - camid: cam2
     x: -0.254
     y: 0.03175
     z: 0.3683
     qx: 0.6963642
-    qy: -0.6963642
-    qz: 0.1227878
+    qy: -0.1227878
+    qz: 0.6963642
     qw: 0.1227878
     # this is the camera that is looking right C (intake is front)
     # camera C is looking right and tilted up 20 degrees (mounted upside down)
+    # In RDF coordinates, we do y=90, z=180, x=-20
