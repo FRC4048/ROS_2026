@@ -16,9 +16,6 @@ cp install/* contents/ros2_ws/install
 # select BACK RPi camera configuration
 cp misc/back_rpi_cam.yaml contents/ros2_ws/src/redshift_odometry/config/camtable.yaml
 
-# create TCP configuration file for back camera
-echo "tcp_port: 5807" > contents/ros2_ws/src/redshift_odometry/config/tcp_config.yaml
-
 cp misc/apriltag_cam1.yaml contents/ros2_ws/src/redshift_odometry/config/apriltag_cam1.yaml
 cp misc/apriltag_cam2.yaml contents/ros2_ws/src/redshift_odometry/config/apriltag_cam2.yaml
 
