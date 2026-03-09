@@ -61,10 +61,13 @@ class TcpClientNode(Node):
         # Local cache of the constant
         self.vision_constant = 1.0/148.0 
 
-        # Set up TCP connection parameters
-        #self.server_ip = '192.168.2.191'
-        self.server_ip = "10.40.48.2"
-        self.server_port = 5806
+        # Declare parameters with defaults
+        self.declare_parameter('server_ip', "10.40.48.2")
+        self.declare_parameter('server_port', 5806)
+        
+        # Get parameter values
+        self.server_ip = self.get_parameter('server_ip').get_parameter_value().string_value
+        self.server_port = self.get_parameter('server_port').get_parameter_value().integer_value
         self.socket_connected = False
 
 
