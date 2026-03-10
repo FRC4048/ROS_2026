@@ -15,6 +15,9 @@ To start node:
 
     note: if testing on the robot -  setServer(4048)
           if testing NOT on the robot - setServer("192.168.ip.where.NT.server.is.running")
+    
+    Environment Variables:
+        SERVER_SUFFIX: Suffix to append to lifesigns topic (e.g., "SIDES", "SHOOTER")
 """
 
 import rclpy

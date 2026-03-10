@@ -18,14 +18,13 @@ To start node:
         then - from a different terminal check the messages:
             ros2 topic echo /pose 
 
-    note: if testing on the robot -  self.server_ip = "10.40.48.2"
-          if testing NOT on the robot - self.server_ip = "192.168.ip.where.NT.server.is.running"
+    note: server_ip is hardcoded to "10.40.48.2" for both front and back
+          SERVER_PORT environment variable determines the port (5806 for back, 5807 for front)
 """
 
 import socket
 import rclpy
 import time
-import socket
 import struct
 import math
 import os
