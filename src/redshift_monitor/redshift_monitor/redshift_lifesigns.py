@@ -54,11 +54,7 @@ class RedshiftLifesigns(Node):
     def __init__(self):
         super().__init__('lifesigns')
         self.ros_publish = True
-        tmp = os.environ.get('PUB_ROS')
-        if (tmp in ('0', 'false', 'False', 'f', 'F')):
-           self.ros_publish = False
-        if (self.ros_publish):
-           self.get_logger().info('Publishing to ROS')
+        #tmp = os.environ.get('PUB_ROS')
 
         # CREATE NETWORK TABLE CONNECTION AND PUBLISHERS
         self.inst = ntcore.NetworkTableInstance.getDefault()
@@ -70,7 +66,11 @@ class RedshiftLifesigns(Node):
         self.get_logger().info("Connected to NETWORK TABLES")
         self.table = self.inst.getTable("ROS")
         self.inst.startDSClient()
-        self.lifesigns_pub = self.table.getDoubleTopic("lifesigns").publish()
+        
+        # Get server suffix from environment variable
+        server_suffix = os.environ.get('SERVER_SUFFIX', '')
+        lifesigns_topic = f"lifesigns_{server_suffix}" if server_suffix else "lifesigns"
+        self.lifesigns_pub = self.table.getDoubleTopic(lifesigns_topic).publish()
         # Add vision constant subscriber
         self.vision_constant_sub = self.table.getDoubleTopic("vision_constant").subscribe(1.0/148.0)
         

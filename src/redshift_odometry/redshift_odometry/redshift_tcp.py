@@ -28,6 +28,7 @@ import time
 import socket
 import struct
 import math
+import os
 from rclpy.node import Node
 from std_msgs.msg import String, Float64
 from roborio_msgs.msg import RoborioOdometry
@@ -64,7 +65,7 @@ class TcpClientNode(Node):
         # Set up TCP connection parameters
         #self.server_ip = '192.168.2.191'
         self.server_ip = "10.40.48.2"
-        self.server_port = 5806
+        self.server_port = int(os.environ.get('SERVER_PORT', '5806'))
         self.socket_connected = False
 
 
