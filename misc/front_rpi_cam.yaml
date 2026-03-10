@@ -2,8 +2,8 @@ profile: front_rpi
 
 cameras:
   - camid: cam1
-    x: 0.257175
-    y: -0.29845
+    x: -0.29845
+    y: 0.257175
     z: 0.3683
     qx: -0.6963642
     qy: -0.1227878
@@ -14,8 +14,8 @@ cameras:
     # In RDF coordinates, we do y=-90, z=180, x=-20
 
   - camid: cam2
-    x: -0.254
-    y: 0.03175
+    x: 0.03175
+    y: -0.254
     z: 0.3683
     qx: 0.6963642
     qy: -0.1227878
