@@ -18,17 +18,18 @@ To start node:
         then - from a different terminal check the messages:
             ros2 topic echo /pose 
 
-    note: if testing on the robot -  self.server_ip = "10.40.48.2"
-          if testing NOT on the robot - self.server_ip = "192.168.ip.where.NT.server.is.running"
+    note: server_ip is hardcoded to "10.40.48.2" for both front and back
+          SERVER_PORT environment variable determines the port (5806 for back, 5807 for front)
 """
 
 import socket
 import rclpy
 import time
-import socket
 import struct
+import math
+import os
 from rclpy.node import Node
-from std_msgs.msg import String
+from std_msgs.msg import String, Float64
 from roborio_msgs.msg import RoborioOdometry
 
 
@@ -50,18 +51,30 @@ class TcpClientNode(Node):
 
     Protocol (Binary):
         The data is packed using Big-Endian (`!`) byte order:
-        - 5 Doubles (8-byte floats): x, y, yaw, distance, latency.
+        - 7 Doubles (8-byte floats): x, y, yaw, distance, cam_to_tag_yaw, latency, std_deviation.
         - 1 Integer (4-byte int): tag ID.
     """
 
     def __init__(self):
         super().__init__("tcp_client_node")
 
+        # Local cache of the constant
+        self.vision_constant = 1.0/148.0 
+
         # Set up TCP connection parameters
-        # self.server_ip = '192.168.1.230'
+        #self.server_ip = '192.168.2.191'
         self.server_ip = "10.40.48.2"
-        self.server_port = 5806
+        self.server_port = int(os.environ.get('SERVER_PORT', '5806'))
         self.socket_connected = False
+
+
+        # Subscribe to vision_constant updates from the lifesigns node
+        self.vision_subscription = self.create_subscription(
+            Float64,
+            "/redshift/vision_constant",
+            self.vision_constant_callback,
+            10
+        )
 
 
         # Subscribe to the /pose topic and use callback to send data over tcp
@@ -70,6 +83,7 @@ class TcpClientNode(Node):
         )
 
         self.connect_to_server()
+
 
     def connect_to_server(self):
         """
@@ -89,12 +103,19 @@ class TcpClientNode(Node):
                     f"Could not connect to socket: {e}. Trying again..."
                 )
                 time.sleep(1)
+                
+    def vision_constant_callback(self, msg):
+        """Update local cache whenever a new value is published on the topic."""
+        if msg.data != self.vision_constant:
+            self.vision_constant = msg.data
+                
 
     def tcp_callback(self, pose_msg):
         """
         Processes incoming pose messages and transmits them via TCP.
 
         Calculates the latency between the message timestamp and current time,
+        calculates standard deviation based on distance and angle,
         packs the message components into a binary buffer, and sends it.
 
         Args:
@@ -103,13 +124,28 @@ class TcpClientNode(Node):
         # calculate latency
         diff = self.get_clock().now() - rclpy.time.Time.from_msg(pose_msg.header.stamp)
         latency = round(diff.nanoseconds / 1e6)  # latency is in milliSeconds
-        # Create message buffer with POSE (x, y, theta), DISTANCE of robot to tag, and the TAG
+        
+        # calculate standard deviation: std = d² × constant / |cos(a)|
+        # where d is distance in meters, a is angle in radians, constant is vision_constant
+        # Use absolute value of cos to ensure positive standard deviation
+        distance = pose_msg.distance
+        angle = pose_msg.cam_to_tag_yaw
+        
+        # Use absolute value of cosine to ensure positive standard deviation
+        cos_angle = abs(math.cos(angle))
+        if cos_angle < 1e-6:  # Prevent division by very small numbers
+            cos_angle = 1e-6
+        
+        std_deviation = (distance * distance) * self.vision_constant / cos_angle
+        # Create message buffer with POSE (x, y, theta), DISTANCE of robot to tag, CAM_TO_TAG_YAW, LATENCY, STD_DEVIATION, and the TAG
         msg = [
             pose_msg.x,
             pose_msg.y,
             pose_msg.yaw,
             pose_msg.distance,
+            pose_msg.cam_to_tag_yaw,
             latency,
+            std_deviation,
             pose_msg.tag,
         ]
         format_string = "!{}d{}i".format(len(msg) - 1, 1)

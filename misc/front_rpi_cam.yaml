@@ -2,29 +2,25 @@ profile: front_rpi
 
 cameras:
   - camid: cam1
-    x: 0
-    y: 0
-    z: 0
-    qx: 0.0
-    qy: 0.0
-    qz: 0.0
-    qw: 1.0
-    # last year's reef camera: 10 left, 5 up
-    # I don't know the offsets of the cameras for this year yet....
+    x: -0.29845
+    y: 0.257175
+    z: 0.3683
+    qx: -0.6963642
+    qy: -0.1227878
+    qz: 0.6963642
+    qw: -0.1227878
+    # this is the camera that is looking left A (intake is front)
+    # camera A is looking left and tilted up 20 degrees (mounted upside down)
+    # In RDF coordinates, we do y=-90, z=180, x=-20
 
   - camid: cam2
-    x: 0.3496
-    y: 0.003
-    z: 0.3
-    qx: 0.0
-    qy: 0.1391731
-    qz: 0.0
-    qw: 0.9902681
-    # last year's under climber cam: 16 right
-
-
-    #  last year's reef camera: 10 left, 5 up (roll=5, pitch=-10, yaw=0)
-    #    qx: 0.0434534
-    #  qy: -0.0870728
-    #  qz: 0.0038017
-    #  qw: 0.9952465
+    x: 0.03175
+    y: -0.254
+    z: 0.3683
+    qx: 0.6963642
+    qy: -0.1227878
+    qz: 0.6963642
+    qw: 0.1227878
+    # this is the camera that is looking right C (intake is front)
+    # camera C is looking right and tilted up 20 degrees (mounted upside down)
+    # In RDF coordinates, we do y=90, z=180, x=-20

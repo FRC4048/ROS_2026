@@ -28,6 +28,8 @@ services:
     image: "frc4048-ros2"
     network_mode: host
     privileged: true
+    environment:
+      - SERVER_PORT=5806
     ipc: host
     command: ["./start-tcp.sh"]
     restart: unless-stopped
@@ -38,8 +40,6 @@ services:
     ipc: host
     privileged: true
     environment:
-      - PUB_ROS=0
-      - PUB_NT=1
+      - SERVER_SUFFIX=SHOOTER
     command: ["./start-lifesigns.sh"]
     restart: unless-stopped
-

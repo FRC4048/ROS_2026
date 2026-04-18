@@ -120,6 +120,9 @@ class TransformNode(Node):
              angles = tft.euler_from_quaternion([tf_wr.transform.rotation.x, tf_wr.transform.rotation.y,
               					 tf_wr.transform.rotation.z, tf_wr.transform.rotation.w], axes='szyx')
      
+             # Step 4.5: Calculate camera-to-tag angle
+             cam_to_tag_yaw = self.calculate_cam_to_tag_angle(tag, tf_tr)
+     
              # Step 5: Construct and publish custom Odometry message
              pose_message = RoborioOdometry()
              pose_message.tag = tag
@@ -127,6 +130,7 @@ class TransformNode(Node):
              pose_message.y = tf_wr.transform.translation.y
              pose_message.yaw = math.degrees(angles[0])
              pose_message.distance = distance
+             pose_message.cam_to_tag_yaw = cam_to_tag_yaw
              pose_message.header.stamp = tf_tr.header.stamp 
              pose_message.header.frame_id = tf_tr.header.frame_id
              self.pose_publisher.publish(pose_message)
@@ -221,7 +225,89 @@ class TransformNode(Node):
        trans_ac.transform.rotation.z = quat_ac[2]       
        trans_ac.transform.rotation.w = quat_ac[3]    
        
-       return trans_ac   
+       return trans_ac
+
+    @staticmethod
+    def angle_from_tag_to_cam_vector(vx: float, vy: float, vz: float) -> float:
+        """
+        Calculate the angle from the tag's normal vector to the camera.
+        
+        vx, vy, vz are the components of the vector from tag to camera from the tag's perspective.
+        tag is using coordinate system where +z is out of the tag surface (perpendicular to tag),
+        +x is to the left, and +y is up (LUF).
+        """
+        # calculate total vector magnitude
+        v_norm = math.sqrt(vx * vx + vy * vy + vz * vz)
+        if v_norm <= 1e-12:
+            return 0.0
+
+        # calculate angle from z-axis (normal vector)
+        v_xy = math.sqrt(vx * vx + vy * vy)
+        return math.degrees(math.atan2(v_xy, vz))
+
+    def calculate_cam_to_tag_angle(self, tag, tf_tr):
+        """
+        Calculate angle between camera-to-tag line and tag perpendicular (normal vector).
+        
+        This gives the approach angle - how directly the camera is facing the tag.
+        0° = camera directly facing tag surface
+        90° = camera parallel to tag surface
+        
+        Args:
+            tag (int): The AprilTag ID
+            tf_tr (TransformStamped): The tag->robot transform from detection_callback
+            
+        Returns:
+            float: Angle in degrees between camera-to-tag line and tag normal
+        """
+        try:
+            tag_frame = "tag" + str(tag) + self.cam_id
+            cam_frame = self.cam_id
+
+            # Preferred: look up tag -> camera directly and use the translation vector.
+            # I'm not sure if there's any change the AprilTag node tag->cam transform will not
+            # be available, so added the fallback just in case.
+            try:
+                tf_tc = self.tf_buffer.lookup_transform(tag_frame, cam_frame, rclpy.time.Time(), Duration(seconds=0.0))
+                vx = tf_tc.transform.translation.x
+                vy = tf_tc.transform.translation.y
+                vz = tf_tc.transform.translation.z
+            except Exception:
+                # Fallback: derive tag -> camera from tag -> robot (given) and robot -> camera.
+                tf_rc = self.tf_buffer.lookup_transform('robot', cam_frame, rclpy.time.Time(), Duration(seconds=0.0))
+
+                # Translation in tag frame:
+                # p_tag->cam = p_tag->robot + R_tag->robot * p_robot->cam
+                p_tr = np.array([
+                    tf_tr.transform.translation.x,
+                    tf_tr.transform.translation.y,
+                    tf_tr.transform.translation.z
+                ])
+
+                q_tr = [
+                    tf_tr.transform.rotation.x,
+                    tf_tr.transform.rotation.y,
+                    tf_tr.transform.rotation.z,
+                    tf_tr.transform.rotation.w
+                ]
+                r_tr = tft.quaternion_matrix(q_tr)[0:3, 0:3]
+
+                p_rc = np.array([
+                    tf_rc.transform.translation.x,
+                    tf_rc.transform.translation.y,
+                    tf_rc.transform.translation.z
+                ])
+
+                p_tc = p_tr + (r_tr @ p_rc)
+                vx, vy, vz = float(p_tc[0]), float(p_tc[1]), float(p_tc[2])
+
+            angle_deg = self.angle_from_tag_to_cam_vector(vx, vy, vz)
+
+            return angle_deg
+            
+        except Exception as e:
+            return 0.0
+
 
     # -----------------------------------------------------------------------------------------
     # Helper function to convert a quaternion to DCM
